@@ -8,6 +8,14 @@ class Visiteur(HttpUser):
     host = "http://localhost:8000"
     wait_time = between(1, 3)
 
+    def on_start(self):
+        response = self.client.get("/api/events", name="/api/events [init]")
+        events_list = response.json()
+
+        self.events_id = [event["id"] for event in events_list]
+        
+        return super().on_start()
+
     @task(2)
     def seek_keyword(self):
         random_event = random.choice([keyword_list])
@@ -20,7 +28,7 @@ class Visiteur(HttpUser):
 
     @task(5)
     def consulter_detail(self):
-        event_id = random.choice([1, 2, 3, 4])
+        event_id = random.choice(self.events_id)
         self.client.get(f"/api/events/{event_id}", name="/api/events/[id]")
 
 

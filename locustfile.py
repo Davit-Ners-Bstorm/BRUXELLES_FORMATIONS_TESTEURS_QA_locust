@@ -14,7 +14,7 @@ class Visiteur(HttpUser):
 
         self.events_id = [event["id"] for event in events_list]
 
-        self.events_city= list(set([event["city"] for event in events_list]))
+        self.events_city= list({event["city"] for event in events_list})
         
         return super().on_start()
     

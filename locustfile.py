@@ -13,12 +13,19 @@ class Visiteur(HttpUser):
         events_list = response.json()
 
         self.events_id = [event["id"] for event in events_list]
+
+        self.events_city= list(set([event["city"] for event in events_list]))
         
         return super().on_start()
+    
+    @task(2)
+    def seek_city(self):
+        random_city = random.choice(self.events_city)
+        self.client.get(f"/api/events", params={"city": random_city}, name="/api/events?city=[random_city]")
 
     @task(2)
     def seek_keyword(self):
-        random_event = random.choice([keyword_list])
+        random_event = random.choice(keyword_list)
         self.client.get(f"/api/events", params={"q": random_event}, name="/api/events?q=[random_event]")
 
 

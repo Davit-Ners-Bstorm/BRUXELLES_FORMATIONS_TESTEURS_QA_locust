@@ -1,14 +1,28 @@
 from locust import HttpUser, task, between, constant
+import random
 
+keyword_list = ["jazz", "electro", "QA", "cloud"]
 
 # PascalCase pour le nom des classes
 class Visiteur(HttpUser):
     host = "http://localhost:8000"
     wait_time = between(1, 3)
 
-    @task
+    @task(2)
+    def seek_keyword(self):
+        random_event = random.choice([keyword_list])
+        self.client.get(f"/api/events", params={"q": random_event}, name="/api/events?q=[random_event]")
+
+
+    @task(3)
     def consulter_catalogue(self):
         self.client.get("/api/events")
+
+    @task(5)
+    def consulter_detail(self):
+        event_id = random.choice([1, 2, 3, 4])
+        self.client.get(f"/api/events/{event_id}", name="/api/events/[id]")
+
 
 class Veilleur(HttpUser):
     host = "http://localhost:8000"

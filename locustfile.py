@@ -16,6 +16,11 @@ class Visiteur(HttpUser):
         self.events_id = [event["id"] for event in events_list]
 
         self.events_city= list({event["city"] for event in events_list})
+
+        # Faire fail un user sur deux
+        # dead = random.randint(1, 2)
+        # if dead == 1:
+        #     raise ValueError
         
         return super().on_start()
     
@@ -58,6 +63,10 @@ class Visiteur(HttpUser):
 
     @task(5)
     def consulter_detail(self):
+        # Pouir faire fail des requetes volontairement
+        # dead = random.randint(1, 2)
+        # if dead == 1:
+        #     raise ValueError
         event_id = random.choice(self.events_id)
         with self.client.get(f"/api/events/{event_id}", name="/api/events/[id]", catch_response=True) as response:
             if response.status_code != 200:

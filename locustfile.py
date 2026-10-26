@@ -1,5 +1,7 @@
-from locust import HttpUser, task, between, constant
+from locust import HttpUser, task, between, constant, events
+from locust.env import Environment
 import random
+import logging
 
 # A changer dans le on start
 keyword_list = ["jazz", "electro", "QA", "cloud"]
@@ -177,8 +179,20 @@ class Organisateur(HttpUser):
             elif any(e["sold"] > e["capacity"] for e in ventes):
                 response.failure("Ventes par événement : un événement a vendu plus que sa capacité")
 
-    
 
+
+SEUL_P95_MS = 300
+
+@events.test_stop.add_listener
+def evaluer_resultats(enviroment: Environment, **kwargs):
+    p95 = enviroment.stats.total.get_response_time_percentile(0.95)
+    logging.info("Bilan : p95 = %s ms", p95)
+
+    if p95 > SEUL_P95_MS:
+        logging.error("Critère de reussite non respecté")
+        enviroment.process_exit_code = 1
+    else:
+        enviroment.process_exit_code = 0
 
 
 # Corr exo2

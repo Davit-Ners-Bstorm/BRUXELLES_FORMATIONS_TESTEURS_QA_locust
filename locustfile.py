@@ -8,6 +8,7 @@ keyword_list = ["jazz", "electro", "QA", "cloud"]
 class Visiteur(HttpUser):
     host = "http://localhost:8000"
     wait_time = between(1, 3)
+    weight = 3
 
     def on_start(self):
         response = self.client.get("/api/events", name="/api/events [init]")
@@ -87,6 +88,30 @@ class Veilleur(HttpUser):
     @task
     def veiller(self):
         self.client.get("/api/health")
+
+
+class ClientConnecte(HttpUser):
+    host = "http://localhost:8000"
+    wait_time = between(2, 5)
+    weight = 1
+
+    def on_start(self):
+        auth_data = {
+            "username": "client@eventflow.test",
+            "password": "client1234"
+        }
+
+        response = self.client.post('/api/auth/token', data=auth_data)
+        response.raise_for_status()
+        
+        credentials = response.json()
+
+        token: str = credentials["access_token"]
+        type: str = credentials["token_type"]
+
+        self.client.headers["Authorization"] = f"{type.capitalize()} {token}"
+
+        return super().on_start()
 
 # Corr exo2
 """ 1

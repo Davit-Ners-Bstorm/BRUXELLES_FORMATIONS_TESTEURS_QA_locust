@@ -1,6 +1,7 @@
 from locust import HttpUser, task, between, constant
 import random
 
+# A changer dans le on start
 keyword_list = ["jazz", "electro", "QA", "cloud"]
 
 # PascalCase pour le nom des classes
@@ -21,12 +22,34 @@ class Visiteur(HttpUser):
     @task(2)
     def seek_city(self):
         random_city = random.choice(self.events_city)
-        self.client.get(f"/api/events", params={"city": random_city}, name="/api/events?city=[random_city]")
+        with self.client.get(f"/api/events", params={"city": random_city}, name="/api/events?city=[random_city]", catch_response=True) as response:
+            if response.status_code != 200:
+                response.failure(f"HTTP {response.status_code}")
+                return
+            resultats = response.json()
+            if not resultats: # if len(resultats) == 0 // if resultats == []
+                response.failure(f"Aucun event à {random_city}")
+            elif any(e["city"] != random_city for e in resultats):
+                response.failure("Pas toutes les villes sont ok")
+
+            # wrong = [e["city"] for e in city if e["city"] != random_city] === même chose que en haut
+            # if wrong:
+            #     response.failure(f"Seek city '{random_city}': event in another city ({wrong[0]})")
+
 
     @task(2)
     def seek_keyword(self):
-        random_event = random.choice(keyword_list)
-        self.client.get(f"/api/events", params={"q": random_event}, name="/api/events?q=[random_event]")
+        random_key_word = random.choice(keyword_list)
+        with self.client.get(f"/api/events", params={"q": random_key_word}, name="/api/events?q=[random_key_word]", catch_response=True) as response:
+            if response.status_code != 200:
+                response.failure(f"HTTP {response.status_code}")
+                return
+            resultats = response.json()
+            if not resultats: # if len(resultats) == 0 // if resultats == []
+                response.failure(f"Aucun event à {random_key_word}")
+            elif any(random_key_word.lower() not in e["title"].lower() for e in resultats):
+                response.failure("Echoué, mot cles pas presents partout")
+
 
 
     @task(3)
@@ -36,7 +59,16 @@ class Visiteur(HttpUser):
     @task(5)
     def consulter_detail(self):
         event_id = random.choice(self.events_id)
-        self.client.get(f"/api/events/{event_id}", name="/api/events/[id]")
+        with self.client.get(f"/api/events/{event_id}", name="/api/events/[id]", catch_response=True) as response:
+            if response.status_code != 200:
+                response.failure(f'HTTP {response.status_code}')
+                return
+            event = response.json()
+            if event["id"] != event_id:
+                response.failure(f"Event {event["id"]} recu au lieu de l'event {event_id}")
+            elif not event["categories"]:
+                response.failure(f"Event {event_id} sans categorie de billets")
+
 
 
 class Veilleur(HttpUser):

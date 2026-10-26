@@ -103,7 +103,7 @@ class ClientConnecte(HttpUser):
 
         response = self.client.post('/api/auth/token', data=auth_data)
         response.raise_for_status()
-        
+
         credentials = response.json()
 
         token: str = credentials["access_token"]
@@ -112,6 +112,14 @@ class ClientConnecte(HttpUser):
         self.client.headers["Authorization"] = f"{type.capitalize()} {token}"
 
         return super().on_start()
+
+    @task(3)
+    def consulter_mes_commandes(self):
+        self.client.get("/api/orders/me")
+
+    @task(4)
+    def consulter_profil(self):
+        self.client.get('/api/auth/me')
 
 # Corr exo2
 """ 1

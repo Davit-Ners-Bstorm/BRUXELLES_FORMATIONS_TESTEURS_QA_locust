@@ -121,6 +121,66 @@ class ClientConnecte(HttpUser):
     def consulter_profil(self):
         self.client.get('/api/auth/me')
 
+    @task(1)
+    def acces_back_office_refuse(self):
+        with self.client.get("/api/admin/summary", catch_response=True) as res:
+            if res.status_code == 403:
+                res.success()
+            else:
+                res.failure("Vous vous êtes fait hacké!")
+
+
+class Organisateur(HttpUser):
+    host = "http://localhost:8000"
+    wait_time = between(5, 10)
+    weight = 1
+
+    def on_start(self):
+        auth_data = {
+            "username": "orga@eventflow.test",
+            "password": "orga1234"
+        }
+        response = self.client.post('/api/auth/token', data=auth_data)
+        response.raise_for_status()
+
+        credentials = response.json()
+
+        token: str = credentials["access_token"]
+        type: str = credentials["token_type"]
+
+        self.client.headers["Authorization"] = f"{type.capitalize()} {token}"
+        return super().on_start()
+
+    @task(1)
+    def consulter_le_summary(self) :
+        with self.client.get("/api/admin/summary", catch_response=True) as res:
+            if res.status_code != 200 :
+                res.failure(f"Erreur de code de retour, attendu 200, recu {res.status_code}")
+                return
+
+            content = res.json()
+
+            if content["published"] > content["events"]:
+                res.failure("Le nombre d'event publiés est supérieur au total d'events")
+
+    @task(2)
+    def consulter_ventes_par_evenements(self):
+        with self.client.get('/api/admin/events', catch_response=True) as response:
+            if response.status_code != 200:
+                response.failure(f"Ventes par événement : HTTP {response.status_code}")
+                return
+
+            ventes = response.json()
+
+            if not ventes:
+                response.failure("Ventes par événement : liste vide")
+            elif any(e["sold"] > e["capacity"] for e in ventes):
+                response.failure("Ventes par événement : un événement a vendu plus que sa capacité")
+
+    
+
+
+
 # Corr exo2
 """ 1
 10 utilisateurs => RPS attendu ? (10 * 1 / (0.1 + 2)) => 10 / 2.1
